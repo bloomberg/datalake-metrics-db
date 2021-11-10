@@ -1,0 +1,45 @@
+
+version: '3.7'
+services:
+
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+      MYSQL_ROOT_PASSWORD: ""
+    volumes:
+    - "./docker-entrypoint-initdb.d.mysql:/docker-entrypoint-initdb.d"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin -h localhost status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - "./docker-entrypoint-initdb.d.psql:/docker-entrypoint-initdb.d"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datalake_analytics_admin -d datalake_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  test:
+    build: .
+    volumes:
+      - .:/migrations:z
+    command:
+      - tox
+    working_dir: /migrations
+    environment:
+      PRE_COMMIT_HOME: ./.pre-commit
+    depends_on:
+      mysql:
+        condition: "service_healthy"
+      postgres:
+        condition: "service_healthy"
