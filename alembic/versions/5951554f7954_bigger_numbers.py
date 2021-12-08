@@ -12,10 +12,9 @@
  ** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  ** See the License for the specific language governing permissions and
  ** limitations under the License.
-"""
 
 
-"""bigger numbers
+bigger numbers
 
 Revision ID: 5951554f7954
 Revises: 36fd1c695484
