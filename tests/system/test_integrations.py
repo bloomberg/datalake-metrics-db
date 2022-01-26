@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import alembic.config
 
-from ..models import ColumnMetrics, InitialQueryMetrics, QueryMetrics
+from ..models import ColumnMetrics, InitialQueryMetrics, QueryMetricsRev2
 
 engine = create_engine(os.environ.get("SQLALCHEMY_URL").strip(), echo=True)
 
@@ -99,7 +99,7 @@ def test_empty_migrations(session: Session):
     alembic.config.main(argv=alembicArgs)
 
     # Then
-    assert session.query(QueryMetrics).count() == 0
+    assert session.query(QueryMetricsRev2).count() == 0
     assert session.query(ColumnMetrics).count() == 0
 
 
@@ -174,13 +174,72 @@ def test_first_to_second_keeps_data(session: Session):
     # Then
 
     assert (
-        session.query(QueryMetrics.totalRows).filter_by(queryId="20210922_091002_00016_mxhhc").first()["totalRows"]
+        session.query(QueryMetricsRev2.totalRows).filter_by(queryId="20210922_091002_00016_mxhhc").first()["totalRows"]
         == 687
     )
 
     assert (
-        session.query(QueryMetrics.physicalInputRows)
+        session.query(QueryMetricsRev2.physicalInputRows)
         .filter_by(queryId="20210922_091002_00016_mxhhc")
         .first()["physicalInputRows"]
+        == 687
+    )
+
+
+@pytest.mark.usefixtures("_cleanup")
+def test_third_peakTotalNonRevocableMemoryBytes_nullable(session: Session):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "head"]
+    alembic.config.main(argv=alembicArgs)
+
+    # When
+    session.add(
+        InitialQueryMetrics(
+            queryId="20210922_091002_00016_mxhhc",
+            transactionId="c0d1f42d-8b58-4dfc-bb74-1a2a9b4078df",
+            query="SELECT * FROM table",
+            remoteClientAddress="127.0.0.1",
+            user="test-user",
+            userAgent="python-requests/2.25.1",
+            source="datalake-python-client",
+            serverAddress="0.0.0.0",
+            serverVersion="358",
+            environment="dev",
+            queryType="SELECT",
+            cpuTime=0.07,
+            wallTime=0.37,
+            queuedTime=0.001,
+            scheduledTime=0.428,
+            analysisTime=0.088,
+            planningTime=0.043,
+            executionTime=0.281,
+            peakUserMemoryBytes=0,
+            peakTotalNonRevocableMemoryBytes=None,
+            peakTaskUserMemory=0,
+            peakTaskTotalMemory=60185,
+            physicalInputBytes=18120,
+            physicalInputRows=687,
+            internalNetworkBytes=58985,
+            internalNetworkRows=687,
+            totalBytes=18120,
+            totalRows=687,
+            outputBytes=61120,
+            outputRows=687,
+            writtenBytes=0,
+            writtenRows=0,
+            cumulativeMemory=0,
+            completedSplits=17,
+            resourceWaitingTime=0.087,
+            createTime=None,
+            executionStartTime=None,
+            endTime=None,
+        )
+    )
+
+    session.commit()
+
+    # Then
+    assert (
+        session.query(QueryMetricsRev2.totalRows).filter_by(queryId="20210922_091002_00016_mxhhc").first()["totalRows"]
         == 687
     )

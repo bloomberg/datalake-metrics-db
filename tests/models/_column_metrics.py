@@ -18,7 +18,7 @@
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import declarative_base
 
-from ._query_metrics import QueryMetrics
+from ._query_metrics import QueryMetricsRev2
 
 Base = declarative_base()
 
@@ -26,7 +26,7 @@ Base = declarative_base()
 class ColumnMetrics(Base):
     __tablename__ = "column_metrics"
 
-    queryId = Column("queryId", String(100), ForeignKey(QueryMetrics.queryId), primary_key=True)
+    queryId = Column("queryId", String(100), ForeignKey(QueryMetricsRev2.queryId), primary_key=True)
     catalogName = Column("catalogName", String(100), primary_key=True)
     schemaName = Column("schemaName", String(100), primary_key=True)
     tableName = Column("tableName", String(100), primary_key=True)
