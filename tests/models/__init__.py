@@ -16,10 +16,11 @@
 
 
 from ._column_metrics import ColumnMetrics
-from ._query_metrics import InitialQueryMetrics, QueryMetrics
+from ._query_metrics import InitialQueryMetrics, QueryMetricsRev2, QueryMetricsRev3
 
 __all__ = (
     "InitialQueryMetrics",
     "ColumnMetrics",
-    "QueryMetrics",
+    "QueryMetricsRev2",
+    "QueryMetricsRev3",
 )
