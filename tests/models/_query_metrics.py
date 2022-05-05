@@ -15,7 +15,7 @@
 """
 
 
-from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy import JSON, Column, DateTime, Float, Integer, String, UnicodeText
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.sqltypes import BigInteger
 
@@ -87,6 +87,23 @@ class _QueryMetricsRev3(_QueryMetricsRev2):
     peakTotalNonRevocableMemoryBytes = Column("peakTotalNonRevocableMemoryBytes", BigInteger, nullable=True)
 
 
+class _QueryMetricsRev4(_QueryMetricsRev3):
+
+    failedCpuTime = Column("failedCpuTime", Float, nullable=True)
+    failedScheduledTime = Column("failedScheduledTime", Float, nullable=True)
+    inputBlockedTime = Column("inputBlockedTime", Float, nullable=True)
+    failedInputBlockedTime = Column("failedInputBlockedTime", Float, nullable=True)
+    outputBlockedTime = Column("outputBlockedTime", Float, nullable=True)
+    failedOutputBlockedTime = Column("failedOutputBlockedTime", Float, nullable=True)
+    processedInputBytes = Column("processedInputBytes", BigInteger, nullable=True)
+    processedInputRows = Column("processedInputRows", BigInteger, nullable=True)
+    uri = Column("uri", String(255), nullable=True)
+    plan = Column("plan", UnicodeText, nullable=True)
+    payload = Column("paylod", JSON(none_as_null=True), nullable=True)
+    planNodeStatsAndCosts = Column("planNodeStatsAndCosts", JSON(none_as_null=True), nullable=True)
+    sessionProperties = Column("sessionProperties", JSON(none_as_null=True), nullable=True)
+
+
 class InitialQueryMetrics(Base, _InitialQueryMetrics):
     __tablename__ = "query_metrics"
 
@@ -100,6 +117,12 @@ class QueryMetricsRev2(Base, _QueryMetricsRev2):
 
 
 class QueryMetricsRev3(Base, _QueryMetricsRev3):
+    __tablename__ = "query_metrics"
+
+    __table_args__ = {"schema": "raw_metrics", "extend_existing": True}
+
+
+class QueryMetricsRev4(Base, _QueryMetricsRev4):
     __tablename__ = "query_metrics"
 
     __table_args__ = {"schema": "raw_metrics", "extend_existing": True}

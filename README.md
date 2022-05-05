@@ -17,7 +17,7 @@ The purpose of this project is to offer safe migrations for upgrading and downgr
 
 ## Installation
 
-This is meant to be used with [Trino](https://github.com/trinodb/trino) and models data based on Trino's query metrics. This has been tested with [Trino 363](https://github.com/trinodb/trino/releases/tag/363), backwards or forwards compatibility is not guaranteed.
+This is meant to be used with [Trino](https://github.com/trinodb/trino) and models data based on Trino's query metrics. This has been tested with [Trino 379](https://github.com/trinodb/trino/releases/tag/379) and is backwards compatible to [Trino 363](https://github.com/trinodb/trino/releases/tag/363). Compatibility beyond this range is not guaranteed.
 
 Before running this you will need to create a new database `datalake_analytics` with a schema called `datalake_metrics`. This is done by hand and is a one-time configuration.
 

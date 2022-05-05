@@ -22,3 +22,7 @@ __pycache__/
 .pytest_cache
 
 .pre-commit
+
+# virtual environment
+venv
+env

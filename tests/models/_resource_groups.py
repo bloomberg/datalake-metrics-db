@@ -15,19 +15,23 @@
 """
 
 
-from ._client_tags import ClientTagsInitial
-from ._column_metrics import ColumnMetrics
-from ._operator_summaries import OperatorSummariesInitial
-from ._query_metrics import InitialQueryMetrics, QueryMetricsRev2, QueryMetricsRev3, QueryMetricsRev4
-from ._resource_groups import ResourceGroupsInitial
+from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy.orm import declarative_base
 
-__all__ = (
-    "InitialQueryMetrics",
-    "ColumnMetrics",
-    "QueryMetricsRev2",
-    "QueryMetricsRev3",
-    "QueryMetricsRev4",
-    "ClientTagsInitial",
-    "ResourceGroupsInitial",
-    "OperatorSummariesInitial",
-)
+from ._query_metrics import QueryMetricsRev4
+
+Base = declarative_base()
+
+
+class _ResourceGroupsInitial:
+
+    resourceGroup = Column("resourceGroup", String(255), primary_key=True)
+
+
+class ResourceGroupsInitial(Base, _ResourceGroupsInitial):
+
+    __tablename__ = "resource_groups"
+
+    queryId = Column("queryId", String(100), ForeignKey(QueryMetricsRev4.queryId), primary_key=True)
+
+    __table_args__ = {"extend_existing": True, "schema": "raw_metrics"}
