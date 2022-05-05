@@ -27,7 +27,15 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import alembic.config
 
-from ..models import ColumnMetrics, InitialQueryMetrics, QueryMetricsRev2
+from ..models import (
+    ClientTagsInitial,
+    ColumnMetrics,
+    InitialQueryMetrics,
+    OperatorSummariesInitial,
+    QueryMetricsRev2,
+    QueryMetricsRev4,
+    ResourceGroupsInitial,
+)
 
 engine = create_engine(os.environ.get("SQLALCHEMY_URL").strip(), echo=True)
 
@@ -53,17 +61,23 @@ def session() -> Generator[Session]:
 def _cleanup(conn: Connection):
     yield
 
-    conn.execute(
+    for table in [
+        "column_metrics",
+        "client_tags",
+        "operator_summaries",
+        "resource_groups",
+    ]:
+        conn.execute(
+            f"""
+            DROP TABLE IF EXISTS {table}
         """
-        DROP TABLE IF EXISTS column_metrics
-    """
-    )
+        )
 
-    conn.execute(
+        conn.execute(
+            f"""
+            DROP TABLE IF EXISTS raw_metrics.{table}
         """
-        DROP TABLE IF EXISTS raw_metrics.column_metrics
-    """
-    )
+        )
 
     conn.execute(
         """
@@ -243,3 +257,279 @@ def test_third_peakTotalNonRevocableMemoryBytes_nullable(session: Session):
         session.query(QueryMetricsRev2.totalRows).filter_by(queryId="20210922_091002_00016_mxhhc").first()["totalRows"]
         == 687
     )
+
+
+@pytest.mark.usefixtures("_cleanup")
+def test_fourth_extra_columns(session: Session):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "head"]
+    alembic.config.main(argv=alembicArgs)
+
+    # When
+    session.add(
+        QueryMetricsRev4(
+            queryId="20210922_091002_00016_mxhhc",
+            transactionId="c0d1f42d-8b58-4dfc-bb74-1a2a9b4078df",
+            query="SELECT * FROM table",
+            remoteClientAddress="127.0.0.1",
+            user="test-user",
+            userAgent="python-requests/2.25.1",
+            source="datalake-python-client",
+            serverAddress="0.0.0.0",
+            serverVersion="358",
+            environment="dev",
+            queryType="SELECT",
+            uri="http://localhost:8080/v1/query/20220505_100804_00003_7dpwd",
+            plan="Fragment 0 [SINGLE]\n    CPU: 5.48ms, Scheduled: 27.03ms, \
+                Blocked 7.72s (Input: 7.72s, Output: 0.00ns), \
+                Input: 1 row (571B); per task: avg.: 1.00 std.dev.: 0.00, \
+                Output: 1 row (571B) └─ ━ │ ┃ ┄ ┅ ┆ ┇ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐ ┑ ┒ ┓",
+            payload={
+                "stageId": "20220505_100804_00003_7dpwd.0",
+                "state": "FINISHED",
+                "coordinatorOnly": False,
+                "types": [],
+                "stageStats": {},
+            },
+            planNodeStatsAndCosts={"stats": {}, "costs": {}},
+            sessionProperties="{}",
+            cpuTime=0.07,
+            failedCpuTime=0,
+            wallTime=0.37,
+            queuedTime=0.001,
+            scheduledTime=0.428,
+            failedScheduledTime=1,
+            analysisTime=0.088,
+            planningTime=0.043,
+            executionTime=0.281,
+            inputBlockedTime=7.72,
+            failedInputBlockedTime=0.1,
+            outputBlockedTime=0.2,
+            failedOutputBlockedTime=0.3,
+            peakUserMemoryBytes=0,
+            peakTotalNonRevocableMemoryBytes=0,
+            peakTaskUserMemory=0,
+            peakTaskTotalMemory=60185,
+            physicalInputBytes=18120,
+            physicalInputRows=687,
+            internalNetworkBytes=58985,
+            internalNetworkRows=687,
+            processedInputBytes=100,
+            processedInputRows=101,
+            totalBytes=18120,
+            totalRows=687,
+            outputBytes=61120,
+            outputRows=687,
+            writtenBytes=0,
+            writtenRows=0,
+            cumulativeMemory=0,
+            completedSplits=17,
+            resourceWaitingTime=0.087,
+            createTime=None,
+            executionStartTime=None,
+            endTime=None,
+        )
+    )
+
+    session.commit()
+
+    session.add(
+        ColumnMetrics(
+            queryId="20210922_091002_00016_mxhhc",
+            catalogName="test-catalog",
+            schemaName="test-schema",
+            tableName="test-table",
+            columnName="test-column",
+            physicalInputBytes=18120,
+            physicalInputRows=687,
+        )
+    )
+
+    session.add(ClientTagsInitial(queryId="20210922_091002_00016_mxhhc", clientTag="superset"))
+    session.add(ClientTagsInitial(queryId="20210922_091002_00016_mxhhc", clientTag="metadata"))
+
+    session.add(ResourceGroupsInitial(queryId="20210922_091002_00016_mxhhc", resourceGroup="limited_user"))
+    session.add(ResourceGroupsInitial(queryId="20210922_091002_00016_mxhhc", resourceGroup="admin"))
+
+    session.add(
+        OperatorSummariesInitial(
+            queryId="20210922_091002_00016_mxhhc",
+            operatorSummary={
+                "stageId": 0,
+                "pipelineId": 0,
+                "operatorId": 1,
+                "planNodeId": "6",
+                "operatorType": "TaskOutputOperator",
+                "totalDrivers": 8,
+                "addInputCalls": 1,
+                "addInputWall": "738.20us",
+                "addInputCpu": "376.80us",
+                "physicalInputDataSize": "0B",
+                "physicalInputPositions": 0,
+                "physicalInputReadTime": "0.00ns",
+                "internalNetworkInputDataSize": "0B",
+                "internalNetworkInputPositions": 0,
+                "rawInputDataSize": "0B",
+            },
+        )
+    )
+    session.add(
+        OperatorSummariesInitial(
+            queryId="20210922_091002_00016_mxhhc",
+            operatorSummary={
+                "stageId": 1,
+                "pipelineId": 0,
+                "operatorId": 0,
+                "planNodeId": "0",
+                "operatorType": "TableScanOperator",
+                "totalDrivers": 1,
+                "addInputCalls": 0,
+                "addInputWall": "0.00ns",
+                "addInputCpu": "0.00ns",
+                "physicalInputDataSize": "0B",
+                "physicalInputPositions": 1,
+                "physicalInputReadTime": "0.00ns",
+                "internalNetworkInputDataSize": "0B",
+                "internalNetworkInputPositions": 0,
+                "rawInputDataSize": "0B",
+                "info": {
+                    "@type": "splitOperator",
+                    "catalogName": "trino_anlytics",
+                    "splitInfo": {"@type": "../../plugin/trino-postgresql/pom.xml:io.trino.plugin.jdbc.JdbcSplit"},
+                },
+            },
+        )
+    )
+
+    session.commit()
+
+    # Then
+    assert "Fragment 0" in (
+        session.query(QueryMetricsRev4.plan).filter_by(queryId="20210922_091002_00016_mxhhc").first()["plan"]
+    )
+    assert "└─ ━ │ ┃ ┄ ┅ ┆ ┇ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐ ┑ ┒ ┓" in (
+        session.query(QueryMetricsRev4.plan).filter_by(queryId="20210922_091002_00016_mxhhc").first()["plan"]
+    )
+
+    assert (
+        session.query(QueryMetricsRev4.payload)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["payload"]["stageId"]
+        == "20220505_100804_00003_7dpwd.0"
+    )
+
+    assert (
+        session.query(QueryMetricsRev4.processedInputBytes)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["processedInputBytes"]
+        == 100
+    )
+
+    assert (
+        session.query(QueryMetricsRev4.processedInputRows)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["processedInputRows"]
+        == 101
+    )
+
+    assert (
+        session.query(ClientTagsInitial)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .filter_by(clientTag="superset")
+        .count()
+        == 1
+    )
+    assert (
+        session.query(ClientTagsInitial)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .filter_by(clientTag="metadata")
+        .count()
+        == 1
+    )
+
+    assert (
+        session.query(ResourceGroupsInitial)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .filter_by(resourceGroup="limited_user")
+        .count()
+        == 1
+    )
+    assert (
+        session.query(ResourceGroupsInitial)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .filter_by(resourceGroup="admin")
+        .count()
+        == 1
+    )
+
+    operator_summaries = [
+        r["operatorSummary"]
+        for r in session.query(OperatorSummariesInitial.operatorSummary)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .all()
+    ]
+    assert any(os["stageId"] == 0 and os["operatorType"] == "TaskOutputOperator" for os in operator_summaries)
+    assert any(os["stageId"] == 1 and os["operatorType"] == "TableScanOperator" for os in operator_summaries)
+
+
+@pytest.mark.usefixtures("_cleanup")
+def test_fourth_null_extra_columns(session: Session):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "head"]
+    alembic.config.main(argv=alembicArgs)
+
+    # When
+    session.add(
+        QueryMetricsRev4(
+            queryId="20210922_091002_00016_mxhhc",
+            transactionId="c0d1f42d-8b58-4dfc-bb74-1a2a9b4078df",
+            query="SELECT * FROM table",
+            remoteClientAddress="127.0.0.1",
+            user="test-user",
+            userAgent="python-requests/2.25.1",
+            source="datalake-python-client",
+            serverAddress="0.0.0.0",
+            serverVersion="358",
+            environment="dev",
+            queryType="SELECT",
+            uri=None,
+            plan=None,
+            payload=None,
+            planNodeStatsAndCosts=None,
+            sessionProperties=None,
+            cpuTime=0.07,
+            wallTime=0.37,
+            queuedTime=0.001,
+            scheduledTime=0.428,
+            analysisTime=0.088,
+            planningTime=0.043,
+            executionTime=0.281,
+            peakUserMemoryBytes=0,
+            peakTotalNonRevocableMemoryBytes=0,
+            peakTaskUserMemory=0,
+            peakTaskTotalMemory=60185,
+            physicalInputBytes=18120,
+            physicalInputRows=687,
+            internalNetworkBytes=58985,
+            internalNetworkRows=687,
+            processedInputBytes=None,
+            processedInputRows=None,
+            totalBytes=18120,
+            totalRows=687,
+            outputBytes=61120,
+            outputRows=687,
+            writtenBytes=0,
+            writtenRows=0,
+            cumulativeMemory=0,
+            completedSplits=17,
+            resourceWaitingTime=0.087,
+            createTime=None,
+            executionStartTime=None,
+            endTime=None,
+        )
+    )
+
+    session.commit()
+
+    # Then
+    assert session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").count() == 1
