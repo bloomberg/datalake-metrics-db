@@ -15,21 +15,21 @@
 """
 
 
-from ._client_tags import ClientTagsInitial
-from ._column_metrics import ColumnMetrics
-from ._failed_events import FailedEventInitial
-from ._operator_summaries import OperatorSummariesInitial
-from ._query_metrics import InitialQueryMetrics, QueryMetricsRev2, QueryMetricsRev3, QueryMetricsRev4
-from ._resource_groups import ResourceGroupsInitial
+from sqlalchemy import BigInteger, Column, DateTime, UnicodeText, func
+from sqlalchemy.orm import declarative_base
 
-__all__ = (
-    "InitialQueryMetrics",
-    "ColumnMetrics",
-    "QueryMetricsRev2",
-    "QueryMetricsRev3",
-    "QueryMetricsRev4",
-    "ClientTagsInitial",
-    "ResourceGroupsInitial",
-    "OperatorSummariesInitial",
-    "FailedEventInitial",
-)
+Base = declarative_base()
+
+
+class _FailedEventInitial:
+
+    id = Column("id", BigInteger, autoincrement=True, primary_key=True)
+    event = Column("event", UnicodeText, nullable=False)
+    createTime = Column("createTime", DateTime, nullable=False, default=func.now())
+
+
+class FailedEventInitial(_FailedEventInitial, Base):
+
+    __tablename__ = "failed_events"
+
+    __table_args__ = {"extend_existing": True, "schema": "raw_metrics"}

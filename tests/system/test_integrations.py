@@ -30,6 +30,7 @@ import alembic.config
 from ..models import (
     ClientTagsInitial,
     ColumnMetrics,
+    FailedEventInitial,
     InitialQueryMetrics,
     OperatorSummariesInitial,
     QueryMetricsRev2,
@@ -61,12 +62,7 @@ def session() -> Generator[Session]:
 def _cleanup(conn: Connection):
     yield
 
-    for table in [
-        "column_metrics",
-        "client_tags",
-        "operator_summaries",
-        "resource_groups",
-    ]:
+    for table in ["column_metrics", "client_tags", "operator_summaries", "resource_groups", "failed_events"]:
         conn.execute(
             f"""
             DROP TABLE IF EXISTS {table}
@@ -115,6 +111,8 @@ def test_empty_migrations(session: Session):
     # Then
     assert session.query(QueryMetricsRev2).count() == 0
     assert session.query(ColumnMetrics).count() == 0
+    assert session.query(OperatorSummariesInitial).count() == 0
+    assert session.query(ResourceGroupsInitial).count() == 0
 
 
 # @pytest.mark.skip()
@@ -533,3 +531,22 @@ def test_fourth_null_extra_columns(session: Session):
 
     # Then
     assert session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").count() == 1
+
+
+@pytest.mark.usefixtures("_cleanup")
+def test_fifth_failed_events(session: Session):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "head"]
+    alembic.config.main(argv=alembicArgs)
+
+    # When
+    session.add(FailedEventInitial(event='{"queryId": "1234", "query": "select * from *"}'))
+    session.commit()
+
+    # Then
+    failed_event = session.query(FailedEventInitial).first()
+
+    assert failed_event is not None
+    assert failed_event.id is not None
+    assert failed_event.event == '{"queryId": "1234", "query": "select * from *"}'
+    assert failed_event.createTime is not None
