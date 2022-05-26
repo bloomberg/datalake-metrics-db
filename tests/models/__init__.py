@@ -19,6 +19,8 @@ from ._client_tags import ClientTagsInitial
 from ._column_metrics import ColumnMetrics
 from ._failed_events import FailedEventInitial
 from ._operator_summaries import OperatorSummariesInitial
+from ._output_column import OutputColumn
+from ._output_column_source import OutputColumnSource
 from ._query_metrics import InitialQueryMetrics, QueryMetricsRev2, QueryMetricsRev3, QueryMetricsRev4
 from ._resource_groups import ResourceGroupsInitial
 
@@ -32,4 +34,6 @@ __all__ = (
     "ResourceGroupsInitial",
     "OperatorSummariesInitial",
     "FailedEventInitial",
+    "OutputColumn",
+    "OutputColumnSource",
 )
