@@ -33,6 +33,8 @@ from ..models import (
     FailedEventInitial,
     InitialQueryMetrics,
     OperatorSummariesInitial,
+    OutputColumn,
+    OutputColumnSource,
     QueryMetricsRev2,
     QueryMetricsRev4,
     ResourceGroupsInitial,
@@ -62,7 +64,15 @@ def session() -> Generator[Session]:
 def _cleanup(conn: Connection):
     yield
 
-    for table in ["column_metrics", "client_tags", "operator_summaries", "resource_groups", "failed_events"]:
+    for table in [
+        "output_column_sources",
+        "output_columns",
+        "column_metrics",
+        "client_tags",
+        "operator_summaries",
+        "resource_groups",
+        "failed_events",
+    ]:
         conn.execute(
             f"""
             DROP TABLE IF EXISTS {table}
@@ -113,9 +123,12 @@ def test_empty_migrations(session: Session):
     assert session.query(ColumnMetrics).count() == 0
     assert session.query(OperatorSummariesInitial).count() == 0
     assert session.query(ResourceGroupsInitial).count() == 0
+    assert session.query(ClientTagsInitial).count() == 0
+    assert session.query(FailedEventInitial).count() == 0
+    assert session.query(OutputColumn).count() == 0
+    assert session.query(OutputColumnSource).count() == 0
 
 
-# @pytest.mark.skip()
 @pytest.mark.usefixtures("_cleanup")
 def test_first_to_second_keeps_data(session: Session):
     # Given
@@ -550,3 +563,108 @@ def test_fifth_failed_events(session: Session):
     assert failed_event.id is not None
     assert failed_event.event == '{"queryId": "1234", "query": "select * from *"}'
     assert failed_event.createTime is not None
+
+
+def test_output_columns_and_sources(session: Session):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "head"]
+    alembic.config.main(argv=alembicArgs)
+
+    # When
+    session.add(
+        QueryMetricsRev4(
+            queryId="20210922_091002_00016_mxhhc",
+            transactionId="c0d1f42d-8b58-4dfc-bb74-1a2a9b4078df",
+            query="SELECT * FROM table",
+            remoteClientAddress="127.0.0.1",
+            user="test-user",
+            userAgent="python-requests/2.25.1",
+            source="datalake-python-client",
+            serverAddress="0.0.0.0",
+            serverVersion="358",
+            environment="dev",
+            queryType="SELECT",
+            uri=None,
+            plan=None,
+            payload=None,
+            planNodeStatsAndCosts=None,
+            sessionProperties=None,
+            cpuTime=0.07,
+            wallTime=0.37,
+            queuedTime=0.001,
+            scheduledTime=0.428,
+            analysisTime=0.088,
+            planningTime=0.043,
+            executionTime=0.281,
+            peakUserMemoryBytes=0,
+            peakTotalNonRevocableMemoryBytes=0,
+            peakTaskUserMemory=0,
+            peakTaskTotalMemory=60185,
+            physicalInputBytes=18120,
+            physicalInputRows=687,
+            internalNetworkBytes=58985,
+            internalNetworkRows=687,
+            processedInputBytes=None,
+            processedInputRows=None,
+            totalBytes=18120,
+            totalRows=687,
+            outputBytes=61120,
+            outputRows=687,
+            writtenBytes=0,
+            writtenRows=0,
+            cumulativeMemory=0,
+            completedSplits=17,
+            resourceWaitingTime=0.087,
+            createTime=None,
+            executionStartTime=None,
+            endTime=None,
+        )
+    )
+    session.commit()
+
+    session.add(
+        OutputColumn(
+            queryId="20210922_091002_00016_mxhhc",
+            catalogName="test-catalog",
+            schemaName="test-schema",
+            tableName="test-table",
+            columnName="test-output-column",
+        )
+    )
+    session.commit()
+
+    session.add(
+        OutputColumnSource(
+            queryId="20210922_091002_00016_mxhhc",
+            catalogName="test-catalog",
+            schemaName="test-schema",
+            tableName="test-table",
+            columnName="test-output-column",
+            sourceCatalogName="test-source-catalog",
+            sourceSchemaName="test-source-schema",
+            sourceTableName="test-source-table",
+            sourceColumnName="test-source-column",
+        )
+    )
+    session.commit()
+
+    # Then
+    result = session.query(OutputColumn).first()
+    assert result is not None
+    assert result.queryId == "20210922_091002_00016_mxhhc"
+    assert result.catalogName == "test-catalog"
+    assert result.schemaName == "test-schema"
+    assert result.tableName == "test-table"
+    assert result.columnName == "test-output-column"
+
+    result = session.query(OutputColumnSource).first()
+    assert result is not None
+    assert result.queryId == "20210922_091002_00016_mxhhc"
+    assert result.catalogName == "test-catalog"
+    assert result.schemaName == "test-schema"
+    assert result.tableName == "test-table"
+    assert result.columnName == "test-output-column"
+    assert result.sourceCatalogName == "test-source-catalog"
+    assert result.sourceSchemaName == "test-source-schema"
+    assert result.sourceTableName == "test-source-table"
+    assert result.sourceColumnName == "test-source-column"
