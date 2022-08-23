@@ -565,6 +565,7 @@ def test_fifth_failed_events(session: Session):
     assert failed_event.createTime is not None
 
 
+@pytest.mark.usefixtures("_cleanup")
 def test_output_columns_and_sources(session: Session):
     # Given
     alembicArgs = ["-c", "alembic.local.ini", "upgrade", "head"]
@@ -668,3 +669,47 @@ def test_output_columns_and_sources(session: Session):
     assert result.sourceSchemaName == "test-source-schema"
     assert result.sourceTableName == "test-source-table"
     assert result.sourceColumnName == "test-source-column"
+
+
+@pytest.mark.usefixtures("_cleanup")
+def test_seventh_query_column_size_increase(session: Session):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "d3cb6e144c2c"]
+    alembic.config.main(argv=alembicArgs)
+
+    # When
+    session.add(
+        QueryMetricsRev4(
+            queryId="20210922_091002_00016_mxhhc",
+            query="a" * 10_100,
+        )
+    )
+
+    # Then
+    assert (
+        session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").first().query == "a" * 10_100
+    )
+
+
+@pytest.mark.usefixtures("_cleanup")
+@pytest.mark.parametrize(
+    "query_value",
+    [
+        pytest.param(None, id="NONE_QUERY"),
+        pytest.param("", id="EMPTY_QUERY"),
+        pytest.param("SELECT * from catalog.schema.table where 'column' = 'hello'", id="NORMAL_QUERY"),
+        pytest.param("A" * 10_000, id="LONG_QUERY"),
+        pytest.param("└─ ━ │ ┃ ┄ ┅ ┆ ┇ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐ ┑ ┒ ┓", id="SPECIAL_UTF8_QUERY"),
+    ],
+)
+def test_seventh_query_column_data_not_lost(session: Session, query_value: str | None):
+    # Given
+    alembicArgs = ["-c", "alembic.local.ini", "upgrade", "d3cb6e144c2c-1"]
+    alembic.config.main(argv=alembicArgs)
+    session.add(QueryMetricsRev4(queryId="20210922_091002_00016_mxhhc", query=query_value))
+
+    # Given
+    upgrade_once()
+
+    # Then
+    assert session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").first().query == query_value
