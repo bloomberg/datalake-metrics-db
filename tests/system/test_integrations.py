@@ -199,7 +199,9 @@ def test_first_to_second_keeps_data(session: Session):
     # Then
 
     assert (
-        session.query(QueryMetricsRev2.totalRows).filter_by(queryId="20210922_091002_00016_mxhhc").first()["totalRows"]
+        session.query(QueryMetricsRev2.totalRows)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["totalRows"]
         == 687
     )
 
@@ -265,7 +267,9 @@ def test_third_peakTotalNonRevocableMemoryBytes_nullable(session: Session):
 
     # Then
     assert (
-        session.query(QueryMetricsRev2.totalRows).filter_by(queryId="20210922_091002_00016_mxhhc").first()["totalRows"]
+        session.query(QueryMetricsRev2.totalRows)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["totalRows"]
         == 687
     )
 
@@ -356,11 +360,23 @@ def test_fourth_extra_columns(session: Session):
         )
     )
 
-    session.add(ClientTagsInitial(queryId="20210922_091002_00016_mxhhc", clientTag="superset"))
-    session.add(ClientTagsInitial(queryId="20210922_091002_00016_mxhhc", clientTag="metadata"))
+    session.add(
+        ClientTagsInitial(queryId="20210922_091002_00016_mxhhc", clientTag="superset")
+    )
+    session.add(
+        ClientTagsInitial(queryId="20210922_091002_00016_mxhhc", clientTag="metadata")
+    )
 
-    session.add(ResourceGroupsInitial(queryId="20210922_091002_00016_mxhhc", resourceGroup="limited_user"))
-    session.add(ResourceGroupsInitial(queryId="20210922_091002_00016_mxhhc", resourceGroup="admin"))
+    session.add(
+        ResourceGroupsInitial(
+            queryId="20210922_091002_00016_mxhhc", resourceGroup="limited_user"
+        )
+    )
+    session.add(
+        ResourceGroupsInitial(
+            queryId="20210922_091002_00016_mxhhc", resourceGroup="admin"
+        )
+    )
 
     session.add(
         OperatorSummariesInitial(
@@ -406,7 +422,9 @@ def test_fourth_extra_columns(session: Session):
                 "info": {
                     "@type": "splitOperator",
                     "catalogName": "trino_anlytics",
-                    "splitInfo": {"@type": "../../plugin/trino-postgresql/pom.xml:io.trino.plugin.jdbc.JdbcSplit"},
+                    "splitInfo": {
+                        "@type": "../../plugin/trino-postgresql/pom.xml:io.trino.plugin.jdbc.JdbcSplit"
+                    },
                 },
             },
         )
@@ -416,10 +434,14 @@ def test_fourth_extra_columns(session: Session):
 
     # Then
     assert "Fragment 0" in (
-        session.query(QueryMetricsRev4.plan).filter_by(queryId="20210922_091002_00016_mxhhc").first()["plan"]
+        session.query(QueryMetricsRev4.plan)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["plan"]
     )
     assert "└─ ━ │ ┃ ┄ ┅ ┆ ┇ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐ ┑ ┒ ┓" in (
-        session.query(QueryMetricsRev4.plan).filter_by(queryId="20210922_091002_00016_mxhhc").first()["plan"]
+        session.query(QueryMetricsRev4.plan)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()["plan"]
     )
 
     assert (
@@ -479,8 +501,14 @@ def test_fourth_extra_columns(session: Session):
         .filter_by(queryId="20210922_091002_00016_mxhhc")
         .all()
     ]
-    assert any(os["stageId"] == 0 and os["operatorType"] == "TaskOutputOperator" for os in operator_summaries)
-    assert any(os["stageId"] == 1 and os["operatorType"] == "TableScanOperator" for os in operator_summaries)
+    assert any(
+        os["stageId"] == 0 and os["operatorType"] == "TaskOutputOperator"
+        for os in operator_summaries
+    )
+    assert any(
+        os["stageId"] == 1 and os["operatorType"] == "TableScanOperator"
+        for os in operator_summaries
+    )
 
 
 @pytest.mark.usefixtures("_cleanup")
@@ -543,7 +571,12 @@ def test_fourth_null_extra_columns(session: Session):
     session.commit()
 
     # Then
-    assert session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").count() == 1
+    assert (
+        session.query(QueryMetricsRev4)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .count()
+        == 1
+    )
 
 
 @pytest.mark.usefixtures("_cleanup")
@@ -553,7 +586,9 @@ def test_fifth_failed_events(session: Session):
     alembic.config.main(argv=alembicArgs)
 
     # When
-    session.add(FailedEventInitial(event='{"queryId": "1234", "query": "select * from *"}'))
+    session.add(
+        FailedEventInitial(event='{"queryId": "1234", "query": "select * from *"}')
+    )
     session.commit()
 
     # Then
@@ -687,7 +722,11 @@ def test_seventh_query_column_size_increase(session: Session):
 
     # Then
     assert (
-        session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").first().query == "a" * 10_100
+        session.query(QueryMetricsRev4)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()
+        .query
+        == "a" * 10_100
     )
 
 
@@ -697,19 +736,32 @@ def test_seventh_query_column_size_increase(session: Session):
     [
         pytest.param(None, id="NONE_QUERY"),
         pytest.param("", id="EMPTY_QUERY"),
-        pytest.param("SELECT * from catalog.schema.table where 'column' = 'hello'", id="NORMAL_QUERY"),
+        pytest.param(
+            "SELECT * from catalog.schema.table where 'column' = 'hello'",
+            id="NORMAL_QUERY",
+        ),
         pytest.param("A" * 10_000, id="LONG_QUERY"),
-        pytest.param("└─ ━ │ ┃ ┄ ┅ ┆ ┇ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐ ┑ ┒ ┓", id="SPECIAL_UTF8_QUERY"),
+        pytest.param(
+            "└─ ━ │ ┃ ┄ ┅ ┆ ┇ ┈ ┉ ┊ ┋ ┌ ┍ ┎ ┏ ┐ ┑ ┒ ┓", id="SPECIAL_UTF8_QUERY"
+        ),
     ],
 )
 def test_seventh_query_column_data_not_lost(session: Session, query_value: str | None):
     # Given
     alembicArgs = ["-c", "alembic.local.ini", "upgrade", "d3cb6e144c2c-1"]
     alembic.config.main(argv=alembicArgs)
-    session.add(QueryMetricsRev4(queryId="20210922_091002_00016_mxhhc", query=query_value))
+    session.add(
+        QueryMetricsRev4(queryId="20210922_091002_00016_mxhhc", query=query_value)
+    )
 
     # Given
     upgrade_once()
 
     # Then
-    assert session.query(QueryMetricsRev4).filter_by(queryId="20210922_091002_00016_mxhhc").first().query == query_value
+    assert (
+        session.query(QueryMetricsRev4)
+        .filter_by(queryId="20210922_091002_00016_mxhhc")
+        .first()
+        .query
+        == query_value
+    )
